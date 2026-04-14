@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 지출 추적 - Gravo (25일 급여 기준)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-red { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); }
+        .card-green { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
+        .card-blue { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); }
+        .card-purple { background: linear-gradient(135deg, #A855F7 0%, #7E22CE 100%); }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <h1 class="text-3xl font-bold text-gray-900">💰 지출 추적 (25일 급여 기준)</h1>
+            <p class="text-sm text-gray-600">당신의 소비를 관리하고 마이너스통장을 줄여보세요!</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-6 overflow-x-auto">
+            <button onclick="switchTab('dashboard')" class="tab-btn active px-4 py-2 rounded-lg font-medium bg-blue-600 text-white">📊 대시보드</button>
+            <button onclick="switchTab('expenses')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-white text-gray-700 border border-gray-200">📋 기록</button>
+            <button onclick="switchTab('analytics')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-white text-gray-700 border border-gray-200">📈 분석</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content space-y-6">
+            <!-- Salary Period Info -->
+            <div class="card-blue text-white p-6 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">📅</span>
+                    <span class="text-sm opacity-90">급여 주기</span>
+                </div>
+                <div class="text-2xl font-bold mb-1" id="salary-period">계산 중...</div>
+                <div class="text-sm opacity-80" id="days-remaining">남은 일수: 계산 중...</div>
+            </div>
+
+            <!-- Income & Budget -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                    <div class="text-xs text-gray-600 font-semibold mb-1">월 소득</div>
+                    <div class="text-2xl font-bold text-gray-900">1,430만원</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div class="text-xs text-red-600 font-semibold mb-1">고정비 (자동이체+투자)</div>
+                    <div class="text-2xl font-bold text-red-700">990만원</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div class="text-xs text-green-600 font-semibold mb-1">가용 예산</div>
+                    <div class="text-2xl font-bold text-green-700">440만원</div>
+                </div>
+            </div>
+
+            <!-- Spending Status -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200">
+                <h2 class="text-lg font-bold mb-4">지출 현황</h2>
+
+                <!-- Card Breakdown -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">카드별 지출</h3>
+                    <div class="space-y-2" id="card-breakdown">
+                        <!-- 동적으로 생성 -->
+                    </div>
+                </div>
+
+                <!-- Spending Summary -->
+                <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                    <div>
+                        <div class="text-xs text-gray-600 mb-1">지출한 금액</div>
+                        <div class="text-3xl font-bold text-red-600" id="total-spent">0원</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-600 mb-1">남은 소비금</div>
+                        <div class="text-3xl font-bold" id="remaining-budget">440만원</div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mt-4">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="font-medium">진행률</span>
+                        <span class="font-bold" id="progress-percent">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div id="progress-bar" class="h-3 rounded-full bg-green-500 transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Minus Account Simulation -->
+            <div class="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-lg border border-purple-200">
+                <h2 class="text-lg font-bold mb-4 text-purple-900">💳 마이너스통장 시뮬레이션</h2>
+
+                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded-lg">
+                        <div class="text-xs text-gray-600 font-semibold mb-1">현재 마이너스통장</div>
+                        <div class="text-2xl font-bold text-red-600">1억 8천만원</div>
+                        <div class="text-xs text-gray-600 mt-1">월 상환액: 230만원</div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg border-2 border-green-300">
+                        <div class="text-xs text-green-700 font-semibold mb-1">💰 남은 금액을 모두 상환에 사용하면</div>
+                        <div class="text-2xl font-bold text-green-600 mb-2" id="simulation-amount">0원</div>
+                        <div class="text-sm text-green-700">
+                            ➡️ 월 상환액이 230만원 → <span id="new-repayment">230만원</span>로 증가
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-green-200 text-sm text-green-700 font-medium">
+                            🎯 상환 기간: <span class="text-2xl font-bold text-green-600" id="repayment-months">78</span>개월 (약<span id="repayment-years">6.5</span>년)
+                        </div>
+                        <div class="mt-2 text-xs text-green-700 bg-green-50 p-2 rounded" id="motivation">
+                            ✨ 현 속도로 가면 약 78개월(6.5년)에 전액 상환!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses Tab -->
+        <div id="expenses-tab" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="p-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-bold">📋 거래 기록</h2>
+                </div>
+
+                <div class="divide-y divide-gray-200 max-h-96 overflow-y-auto" id="expense-list">
+                    <div class="p-8 text-center text-gray-500">거래 기록이 없습니다.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-lg border border-gray-200">
+                <h2 class="text-lg font-bold mb-4">📊 카테고리별 지출</h2>
+                <canvas id="categoryChart" style="max-height: 300px;"></canvas>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg border border-gray-200">
+                <h2 class="text-lg font-bold mb-4">📈 카드별 지출</h2>
+                <canvas id="cardChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Button -->
+    <button onclick="openExpenseForm()" class="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition z-50 flex items-center gap-2 text-lg">
+        ➕ 지출 입력
+    </button>
+
+    <!-- Expense Form Modal -->
+    <div id="expense-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 class="text-2xl font-bold mb-4">지출 입력</h2>
+
+            <form onsubmit="saveExpense(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+                    <input type="date" id="expense-date" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">카드</label>
+                    <select id="expense-card" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="롯데카드">롯데카드</option>
+                        <option value="농협카드">농협카드</option>
+                        <option value="신한카드">신한카드</option>
+                        <option value="삼성 M/S">삼성 M/S</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                    <select id="expense-category" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="식비/외식">식비/외식</option>
+                        <option value="마트/장보기">마트/장보기</option>
+                        <option value="의류/용품">의류/용품</option>
+                        <option value="운동/건강">운동/건강</option>
+                        <option value="의료/약국">의료/약국</option>
+                        <option value="여행/레저">여행/레저</option>
+                        <option value="온라인쇼핑">온라인쇼핑</option>
+                        <option value="유류비">유류비</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">금액</label>
+                    <input type="number" id="expense-amount" placeholder="0" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">메모</label>
+                    <input type="text" id="expense-memo" placeholder="선택사항" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700">저장</button>
+                    <button type="button" onclick="closeExpenseForm()" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-medium hover:bg-gray-400">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Settings
+        const MONTHLY_INCOME = 14300000;
+        const FIXED_COSTS = 9900000;
+        const AVAILABLE_BUDGET = 4400000;
+        const MINUS_BALANCE = 180000000;
+        const BASE_REPAYMENT = 2300000;
+        const PAYDAY = 25;
+
+        let expenses = [];
+        let categoryChart = null;
+        let cardChart = null;
+
+        // Initialize
+        function init() {
+            loadExpenses();
+            setExpenseDate();
+            updateDashboard();
+            calculateSalaryPeriod();
+        }
+
+        // Set today's date
+        function setExpenseDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expense-date').value = today;
+        }
+
+        // Calculate salary period
+        function calculateSalaryPeriod() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const day = today.getDate();
+
+            let startDate, endDate;
+
+            if (day >= PAYDAY) {
+                startDate = new Date(year, month, PAYDAY);
+                endDate = new Date(year, month + 1, PAYDAY - 1);
+            } else {
+                startDate = new Date(year, month - 1, PAYDAY);
+                endDate = new Date(year, month, PAYDAY - 1);
+            }
+
+            const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+            
+            document.getElementById('salary-period').textContent = 
+                `${startDate.getMonth() + 1}월 ${startDate.getDate()}일 ~ ${endDate.getMonth() + 1}월 ${endDate.getDate()}일`;
+            document.getElementById('days-remaining').textContent = `남은 일수: ${daysRemaining}일`;
+        }
+
+        // Get expenses in salary period
+        function getExpensesInPeriod() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const day = today.getDate();
+
+            let startDate;
+            if (day >= PAYDAY) {
+                startDate = new Date(year, month, PAYDAY);
+            } else {
+                startDate = new Date(year, month - 1, PAYDAY);
+            }
+
+            return expenses.filter(e => new Date(e.date) >= startDate);
+        }
+
+        // Update dashboard
+        function updateDashboard() {
+            const periodExpenses = getExpensesInPeriod();
+            const total = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const remaining = AVAILABLE_BUDGET - total;
+            const progress = (total / AVAILABLE_BUDGET) * 100;
+
+            // Update total spent
+            document.getElementById('total-spent').textContent = formatCurrency(total);
+            document.getElementById('total-spent').className = remaining >= 0 ? 'text-3xl font-bold text-red-600' : 'text-3xl font-bold text-red-700';
+
+            // Update remaining
+            const remainingEl = document.getElementById('remaining-budget');
+            remainingEl.textContent = formatCurrency(remaining);
+            remainingEl.className = remaining >= 0 ? 'text-3xl font-bold text-green-600' : 'text-3xl font-bold text-red-600';
+
+            // Update progress
+            document.getElementById('progress-percent').textContent = progress.toFixed(1) + '%';
+            document.getElementById('progress-bar').style.width = Math.min(progress, 100) + '%';
+            document.getElementById('progress-bar').className = 
+                progress > 100 ? 'h-3 rounded-full bg-red-500 transition-all' : 
+                progress > 80 ? 'h-3 rounded-full bg-yellow-500 transition-all' : 
+                'h-3 rounded-full bg-green-500 transition-all';
+
+            // Card breakdown
+            updateCardBreakdown(periodExpenses);
+
+            // Simulation
+            const newRepayment = BASE_REPAYMENT + remaining;
+            const monthsToRepay = Math.ceil(MINUS_BALANCE / newRepayment);
+            const yearsToRepay = (monthsToRepay / 12).toFixed(1);
+
+            document.getElementById('simulation-amount').textContent = formatCurrency(remaining);
+            document.getElementById('new-repayment').textContent = formatCurrency(newRepayment);
+            document.getElementById('repayment-months').textContent = monthsToRepay;
+            document.getElementById('repayment-years').textContent = yearsToRepay;
+
+            if (monthsToRepay < 78) {
+                document.getElementById('motivation').innerHTML = 
+                    `✨ 현 속도(월 230만원)보다 ${(78 - monthsToRepay).toFixed(0)}개월 더 빨리 상환 가능!`;
+            }
+
+            // Update expense list
+            updateExpenseList(periodExpenses);
+
+            // Update charts
+            updateCharts(periodExpenses);
+        }
+
+        // Update card breakdown
+        function updateCardBreakdown(expenses) {
+            const byCard = {};
+            expenses.forEach(e => {
+                byCard[e.card] = (byCard[e.card] || 0) + e.amount;
+            });
+
+            const cardColors = {
+                '롯데카드': '#EF4444',
+                '농협카드': '#10B981',
+                '신한카드': '#3B82F6',
+                '삼성 M/S': '#F59E0B'
+            };
+
+            let html = '';
+            for (const [card, amount] of Object.entries(byCard)) {
+                const percent = (amount / AVAILABLE_BUDGET) * 100;
+                html += `
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">${card}</span>
+                            <span>${formatCurrency(amount)}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="h-2 rounded-full transition-all" style="width: ${Math.min(percent, 100)}%; background-color: ${cardColors[card]}"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('card-breakdown').innerHTML = html || '<p class="text-gray-500">아직 지출이 없습니다.</p>';
+        }
+
+        // Update expense list
+        function updateExpenseList(periodExpenses) {
+            const sorted = [...periodExpenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            if (sorted.length === 0) {
+                document.getElementById('expense-list').innerHTML = '<div class="p-8 text-center text-gray-500">거래 기록이 없습니다.</div>';
+                return;
+            }
+
+            const cardColors = {
+                '롯데카드': 'bg-red-100 text-red-800',
+                '농협카드': 'bg-green-100 text-green-800',
+                '신한카드': 'bg-blue-100 text-blue-800',
+                '삼성 M/S': 'bg-yellow-100 text-yellow-800'
+            };
+
+            let html = '';
+            sorted.forEach((expense, idx) => {
+                const date = new Date(expense.date);
+                html += `
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <div class="font-medium text-gray-900">${expense.memo || expense.category}</div>
+                                <div class="text-xs text-gray-600">
+                                    ${date.toLocaleDateString('ko-KR', {month: 'short', day: 'numeric', weekday: 'short'})}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-red-600">${formatCurrency(expense.amount)}</div>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="text-xs px-2 py-1 rounded-full ${cardColors[expense.card] || 'bg-gray-100'}">
+                                        ${expense.card}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="deleteExpense(${idx})" class="text-xs text-red-600 hover:text-red-800 font-medium">삭제</button>
+                    </div>
+                `;
+            });
+
+            document.getElementById('expense-list').innerHTML = html;
+        }
+
+        // Update charts
+        function updateCharts(periodExpenses) {
+            // Category chart
+            const byCategory = {};
+            periodExpenses.forEach(e => {
+                byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
+            });
+
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChart) categoryChart.destroy();
+            categoryChart = new Chart(categoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(byCategory),
+                    datasets: [{
+                        label: '지출액',
+                        data: Object.values(byCategory),
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#1D4ED8',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { callback: value => (value / 10000).toFixed(0) + '만' } }
+                    }
+                }
+            });
+
+            // Card chart
+            const byCard = {};
+            periodExpenses.forEach(e => {
+                byCard[e.card] = (byCard[e.card] || 0) + e.amount;
+            });
+
+            const cardCtx = document.getElementById('cardChart').getContext('2d');
+            if (cardChart) cardChart.destroy();
+            cardChart = new Chart(cardCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(byCard),
+                    datasets: [{
+                        data: Object.values(byCard),
+                        backgroundColor: ['#EF4444', '#10B981', '#3B82F6', '#F59E0B']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tab + '-tab').classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-200');
+            });
+
+            event.target.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-200');
+            event.target.classList.add('bg-blue-600', 'text-white');
+        }
+
+        // Expense form
+        function openExpenseForm() {
+            document.getElementById('expense-modal').classList.remove('hidden');
+        }
+
+        function closeExpenseForm() {
+            document.getElementById('expense-modal').classList.add('hidden');
+        }
+
+        function saveExpense(event) {
+            event.preventDefault();
+
+            const expense = {
+                date: document.getElementById('expense-date').value,
+                card: document.getElementById('expense-card').value,
+                category: document.getElementById('expense-category').value,
+                amount: parseInt(document.getElementById('expense-amount').value),
+                memo: document.getElementById('expense-memo').value
+            };
+
+            expenses.push(expense);
+            saveExpenses();
+            updateDashboard();
+            closeExpenseForm();
+
+            // Reset form
+            setExpenseDate();
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-memo').value = '';
+        }
+
+        function deleteExpense(index) {
+            const periodExpenses = getExpensesInPeriod();
+            const toDelete = periodExpenses[index];
+            expenses = expenses.filter(e => !(e.date === toDelete.date && e.amount === toDelete.amount && e.card === toDelete.card));
+            saveExpenses();
+            updateDashboard();
+        }
+
+        // Storage
+        function saveExpenses() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+
+        function loadExpenses() {
+            const saved = localStorage.getItem('expenses');
+            if (saved) {
+                expenses = JSON.parse(saved);
+            }
+        }
+
+        // Utilities
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(num);
+        }
+
+        // Start
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
