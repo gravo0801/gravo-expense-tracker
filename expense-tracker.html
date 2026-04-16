@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 Gravo 지출 추적</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <style>
+        * {
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+            color: #1a1a1a;
+        }
+
+        .flex { display: flex; }
+        .flex-1 { flex: 1; }
+        .gap-4 { gap: 16px; }
+        .gap-3 { gap: 12px; }
+        .gap-2 { gap: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-1 { margin-bottom: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .p-6 { padding: 24px; }
+        .p-4 { padding: 16px; }
+        .px-4 { padding-left: 16px; padding-right: 16px; }
+        .py-3 { padding-top: 12px; padding-bottom: 12px; }
+        .rounded-lg { border-radius: 8px; }
+        .rounded-xl { border-radius: 12px; }
+        .border { border: 1px solid #e5e5e5; }
+        .h-screen { height: 100vh; }
+        .w-64 { width: 256px; }
+        .ml-64 { margin-left: 256px; }
+        .transition { transition: all 0.2s ease; }
+
+        .hidden {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            background: #fff;
+            border-right: 1px solid #f0f0f0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 256px;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 40;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .sidebar-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin: 0;
+            margin-bottom: 6px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: #999;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-item {
+            padding: 14px 16px;
+            margin: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f8f8f8;
+            color: #333;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #5b4cff 0%, #6d5dff 100%);
+            color: #fff;
+        }
+
+        /* 메인 콘텐츠 */
+        .main-content {
+            background: #fff;
+            margin-left: 256px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 28px 32px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.8px;
+            margin: 0;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+            background: linear-gradient(to bottom, #fafafa 0%, #fff 100%);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .space-y-6 > * + * { margin-top: 24px; }
+        .space-y-4 > * + * { margin-top: 16px; }
+        .space-y-3 > * + * { margin-top: 12px; }
+        .space-y-2 > * + * { margin-top: 8px; }
+
+        /* 카드 */
+        .card-item {
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card-item:hover {
+            border-color: #e0e0e0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        /* 스탯 박스 */
+        .stat-box {
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            border-color: #5b4cff;
+            box-shadow: 0 8px 24px rgba(91, 76, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #999;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #333 0%, #666 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-value.red {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-value.green {
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-subtext {
+            font-size: 12px;
+            color: #ccc;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* 입력 필드 */
+        .input-field {
+            background: #fff;
+            border: 1.5px solid #f0f0f0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #5b4cff;
+            box-shadow: 0 0 0 3px rgba(91, 76, 255, 0.1);
+        }
+
+        /* 버튼 */
+        .btn-primary {
+            background: linear-gradient(135deg, #5b4cff 0%, #6d5dff 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(91, 76, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1.5px solid #f0f0f0;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f0f0;
+            border-color: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ffebee;
+            color: #d32f2f;
+            border: 1.5px solid #ffcccc;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            background: #ffcccc;
+        }
+
+        /* 모달 */
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 28px 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.3px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-body > * + * {
+            margin-top: 16px;
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 뱃지 */
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-blue {
+            background: #e8ebff;
+            color: #5b4cff;
+        }
+
+        .badge-green {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-red {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        /* 진행 바 */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #5b4cff 0%, #6d5dff 100%);
+            transition: width 0.3s ease;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .main-content { margin-left: 0; }
+            .content-area { padding: 16px; }
+        }
+
+        /* 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- 사이드바 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="sidebar-title">💰 Gravo</h1>
+            <p class="sidebar-subtitle">지출 추적 및 재정 관리</p>
+        </div>
+
+        <nav>
+            <div class="nav-item active" onclick="switchTab('dashboard')">📊 대시보드</div>
+            <div class="nav-item" onclick="switchTab('fixed-costs')">🔧 고정비 관리</div>
+            <div class="nav-item" onclick="switchTab('timeline')">📅 월별 일정</div>
+            <div class="nav-item" onclick="switchTab('expenses')">📋 거래 기록</div>
+            <div class="nav-item" onclick="switchTab('analytics')">📈 분석</div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="main-content">
+        <div class="header">
+            <h2 class="page-title" id="page-title">📊 대시보드</h2>
+        </div>
+
+        <div class="content-area">
+            <!-- 대시보드 탭 -->
+            <div id="dashboard-tab" class="tab-content active space-y-6">
+                <div class="card-grid">
+                    <div class="stat-box" onclick="editMonthlyIncome()">
+                        <div class="stat-label">월 소득</div>
+                        <div class="stat-value"><span id="monthly-income-display">14,300,000</span></div>
+                        <div class="stat-subtext">클릭하여 수정</div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-label">🏦 마이너스통장 (우리은행)</div>
+                        <div style="margin: 12px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">현황</div>
+                                <div style="font-weight: 700; color: #d32f2f; font-size: 16px;" id="minus-percent-display">0%</div>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: linear-gradient(90deg, #ffe0e0 0%, #ffcccc 100%); border-radius: 5px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);">
+                                <div id="minus-bar" style="height: 100%; background: linear-gradient(90deg, #d32f2f 0%, #c62828 100%); width: 50%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 5px; box-shadow: 0 2px 6px rgba(211, 47, 47, 0.25);"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: #bbb; font-weight: 500;">
+                                <span id="minus-current">0</span>
+                                <span>/ 1억</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0; cursor: pointer;" onclick="editMinusBalance()">
+                            <div style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px;">✏️ 수정</div>
+                            <div style="font-size: 14px; font-weight: 600; color: #d32f2f;" id="minus-balance-display">48,000,000</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-label">🏛️ 주담대 (농협은행)</div>
+                        <div style="margin: 12px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">진행률</div>
+                                <div style="font-weight: 700; color: #e67e22; font-size: 16px;" id="mortgage-percent-display">0%</div>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: linear-gradient(90deg, #ffe8cc 0%, #ffd699 100%); border-radius: 5px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);">
+                                <div id="mortgage-bar" style="height: 100%; background: linear-gradient(90deg, #e67e22 0%, #d35400 100%); width: 50%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 5px; box-shadow: 0 2px 6px rgba(230, 126, 34, 0.25);"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: #bbb; font-weight: 500;">
+                                <span id="mortgage-current">0</span>
+                                <span>/ 2억</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0; cursor: pointer;" onclick="editMortgageLoan()">
+                            <div style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px;">✏️ 수정</div>
+                            <div style="font-size: 14px; font-weight: 600; color: #e67e22;" id="mortgage-balance-display">180,000,000</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-label">가용 예산</div>
+                        <div style="margin: 12px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">사용률</div>
+                                <div style="font-weight: 700; color: #2e7d32; font-size: 16px;" id="budget-percent-display">0%</div>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: linear-gradient(90deg, #e8f5e9 0%, #c8e6c9 100%); border-radius: 5px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);">
+                                <div id="budget-bar" style="height: 100%; background: linear-gradient(90deg, #2e7d32 0%, #1b5e20 100%); width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 5px; box-shadow: 0 2px 6px rgba(46, 125, 50, 0.25);"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: #bbb; font-weight: 500;">
+                                <span id="budget-current">0</span>
+                                <span id="budget-total">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-grid">
+                    <div class="card-item">
+                        <div class="stat-label">📅 급여 주기</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-top: 8px;" id="salary-period">계산 중...</div>
+                        <div class="stat-subtext" id="days-remaining">남은 일수: 계산 중...</div>
+                    </div>
+
+                    <div class="card-item">
+                        <div class="stat-label">📊 지출 현황</div>
+                        <div style="display: flex; gap: 16px; margin-top: 12px; margin-bottom: 12px;">
+                            <div>
+                                <div class="stat-subtext">지출</div>
+                                <div style="font-size: 20px; font-weight: 600;" id="total-spent">0원</div>
+                            </div>
+                            <div>
+                                <div class="stat-subtext">남음</div>
+                                <div style="font-size: 20px; font-weight: 600; color: #2e7d32;" id="remaining-budget">0원</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="stat-subtext" id="progress-percent">0%</div>
+                    </div>
+                </div>
+
+                <!-- 마이너스통장 예상액 섹션 -->
+                <div class="card-item" style="background: linear-gradient(135deg, #ffe0e0 0%, #fff 100%); border-color: #ffcccc;">
+                    <div class="stat-label">📊 마이너스통장 현황 & 예상액</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; font-size: 14px;">
+                        <div>
+                            <div class="stat-subtext">현재 잔액</div>
+                            <div style="font-weight: 600; color: #d32f2f; font-size: 18px; margin-top: 4px;" id="sim-current-balance">48,000,000</div>
+                        </div>
+                        <div>
+                            <div class="stat-subtext">예상 마이너스 확대</div>
+                            <div style="font-weight: 600; color: #d32f2f; font-size: 18px; margin-top: 4px;" id="minus-expansion">0원</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #ffcccc;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #d32f2f; letter-spacing: 0.5px; margin-bottom: 8px;">지난달 카드값 총액 입력</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" id="last-month-cards" class="input-field" style="flex: 1; font-size: 14px;" placeholder="예: 3500000">
+                            <button class="btn-primary" style="background: #d32f2f;" onclick="saveLastMonthCards()">저장</button>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px; padding: 12px; background: #fff8f8; border-radius: 6px; border-left: 3px solid #d32f2f;">
+                        <div style="font-size: 11px; color: #999; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 4px;">💡 예상 현황</div>
+                        <div style="font-size: 13px; color: #666;">
+                            이번달 예상 마이너스: <span style="font-weight: 700; color: #d32f2f;" id="projected-minus">0원</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 카드 사용액 그래프 섹션 -->
+                <div class="card-item">
+                    <div class="stat-label">💳 카드 사용액 현황</div>
+                    
+                    <div style="margin-top: 16px;">
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; font-size: 14px;">🔴 롯데카드 (한도: 50만원)</span>
+                                <span style="font-weight: 700; color: #e74c3c; font-size: 14px;" id="lotte-percent">0%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #ffe0e0; border-radius: 4px; overflow: hidden;">
+                                <div id="lotte-bar" style="height: 100%; background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%); width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #999;">
+                                <span id="lotte-used">0원</span>
+                                <span id="lotte-remaining">50만원</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; font-size: 14px;">🟢 농협카드 (한도: 40만원)</span>
+                                <span style="font-weight: 700; color: #27ae60; font-size: 14px;" id="nh-percent">0%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #e8f5e9; border-radius: 4px; overflow: hidden;">
+                                <div id="nh-bar" style="height: 100%; background: linear-gradient(90deg, #27ae60 0%, #229954 100%); width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #999;">
+                                <span id="nh-used">0원</span>
+                                <span id="nh-remaining">40만원</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; font-size: 14px;">🔵 신한카드 (한도: 20만원)</span>
+                                <span style="font-weight: 700; color: #3498db; font-size: 14px;" id="shinhan-percent">0%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #e3f2fd; border-radius: 4px; overflow: hidden;">
+                                <div id="shinhan-bar" style="height: 100%; background: linear-gradient(90deg, #3498db 0%, #2980b9 100%); width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #999;">
+                                <span id="shinhan-used">0원</span>
+                                <span id="shinhan-remaining">20만원</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 주담대 상환 정보 섹션 -->
+                <div class="card-item" style="background: linear-gradient(135deg, #fff3e0 0%, #fff 100%); border-color: #ffe0b2;">
+                    <div class="stat-label">🏛️ 주담대 상환 정보 (농협은행)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; font-size: 14px;">
+                        <div>
+                            <div class="stat-subtext">자동이체 (정기)</div>
+                            <div style="font-weight: 600; color: #e67e22; font-size: 16px; margin-top: 4px;" id="mortgage-auto-transfer">130만원</div>
+                        </div>
+                        <div>
+                            <div class="stat-subtext">추가 상환 (내+아내)</div>
+                            <div style="font-weight: 600; color: #e67e22; font-size: 16px; margin-top: 4px;" id="mortgage-additional">100만원</div>
+                        </div>
+                        <div>
+                            <div class="stat-subtext">월 총 상환액</div>
+                            <div style="font-weight: 600; color: #d35400; font-size: 18px; margin-top: 4px;" id="mortgage-total-payment">230만원</div>
+                        </div>
+                        <div>
+                            <div class="stat-subtext">상환 기간</div>
+                            <div style="font-weight: 600; color: #d35400; font-size: 18px; margin-top: 4px;"><span id="mortgage-months">78</span>개월</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 고정비 관리 탭 -->
+            <div id="fixed-costs-tab" class="tab-content space-y-6">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">고정비 항목</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="toggleFixedCostsEdit()">✏️ 수정</button>
+                        <button class="btn-primary" onclick="openAddFixedCostModal()">➕ 새 항목</button>
+                    </div>
+                </div>
+
+                <div class="space-y-3" id="fixed-costs-container"></div>
+
+                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+                    <div style="font-size: 15px; color: #666; margin-bottom: 12px;">
+                        총 고정비: <span style="font-weight: 600; color: #333; font-size: 16px;" id="total-fixed-display">9,900,000</span>
+                    </div>
+                    <button class="btn-primary" style="width: 100%;" onclick="saveAllFixedCosts()">💾 변경사항 저장</button>
+                </div>
+            </div>
+
+            <!-- 월별 일정 탭 -->
+            <div id="timeline-tab" class="tab-content space-y-4">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">월별 고정비 일정</h3>
+                <div class="space-y-2" id="timeline-container"></div>
+            </div>
+
+            <!-- 거래 기록 탭 -->
+            <div id="expenses-tab" class="tab-content space-y-6">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">거래 기록</h3>
+                    <button class="btn-primary" onclick="openExpenseForm()">➕ 새 거래</button>
+                </div>
+                <div class="space-y-2" id="expenses-container"></div>
+            </div>
+
+            <!-- 분석 탭 -->
+            <div id="analytics-tab" class="tab-content space-y-6">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📊 지출 분석</h3>
+                    <button class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="analyzeWithAI()">🤖 AI 분석</button>
+                </div>
+
+                <div id="ai-analysis-container" class="card-item hidden" style="background: linear-gradient(135deg, #f0ebff 0%, #fff 100%); border-color: #e8e0ff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 style="margin: 0; font-size: 15px; font-weight: 600;">🤖 Claude AI 분석 결과</h4>
+                        <button class="btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="closeAIAnalysis()">✕</button>
+                    </div>
+                    <div id="ai-analysis-content" style="font-size: 14px; color: #666; line-height: 1.6;"></div>
+                </div>
+
+                <div class="card-item">
+                    <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📊 카테고리별 지출</h3>
+                    <canvas id="categoryChart" style="max-height: 300px;"></canvas>
+                </div>
+                <div class="card-item">
+                    <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📈 카드별 지출</h3>
+                    <canvas id="cardChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달들 -->
+    <div id="income-modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">월 소득 수정</h3>
+            </div>
+            <div class="modal-body">
+                <input type="number" id="income-input" class="input-field" style="width: 100%;" placeholder="금액 입력">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" style="flex: 1;" onclick="saveMonthlyIncome()">저장</button>
+                <button class="btn-secondary" style="flex: 1;" onclick="closeIncomeModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="minus-modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">마이너스통장 잔액 (우리은행)</h3>
+            </div>
+            <div class="modal-body">
+                <input type="number" id="minus-input" class="input-field" style="width: 100%;" placeholder="현재 잔액 입력">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" style="flex: 1;" onclick="saveMinusBalance()">저장</button>
+                <button class="btn-secondary" style="flex: 1;" onclick="closeMinusModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mortgage-modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">주담대 잔액 (농협은행)</h3>
+            </div>
+            <div class="modal-body">
+                <input type="number" id="mortgage-input" class="input-field" style="width: 100%;" placeholder="현재 잔액 입력">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" style="flex: 1;" onclick="saveMortgageLoan()">저장</button>
+                <button class="btn-secondary" style="flex: 1;" onclick="closeMortgageModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-fixed-cost-modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">고정비 항목 추가</h3>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">항목명</label>
+                    <input type="text" id="fixed-name-input" class="input-field" style="width: 100%;" placeholder="예: 농협 (주담대)">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">금액</label>
+                    <input type="number" id="fixed-amount-input" class="input-field" style="width: 100%;" placeholder="0">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">지출 날짜</label>
+                    <select id="fixed-date-input" class="input-field" style="width: 100%;">
+                        <option value="10">10일</option>
+                        <option value="12">12일</option>
+                        <option value="13">13일</option>
+                        <option value="14">14일</option>
+                        <option value="15">15일</option>
+                        <option value="20">20일</option>
+                        <option value="25" selected>25일</option>
+                        <option value="26">26일</option>
+                        <option value="27">27일</option>
+                        <option value="28">28일</option>
+                        <option value="30">30일</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" style="flex: 1;" onclick="saveNewFixedCost()">추가</button>
+                <button class="btn-secondary" style="flex: 1;" onclick="closeAddFixedCostModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="expense-modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="expense-title">거래 입력</h3>
+            </div>
+            <form onsubmit="saveExpense(event)">
+                <div class="modal-body">
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">날짜</label>
+                        <input type="date" id="expense-date" class="input-field" style="width: 100%;" required>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">카드</label>
+                        <select id="expense-card" class="input-field" style="width: 100%;" required>
+                            <option value="롯데카드">롯데카드</option>
+                            <option value="농협카드">농협카드</option>
+                            <option value="신한카드">신한카드</option>
+                            <option value="현대카드">현대카드</option>
+                            <option value="KB카드">KB카드</option>
+                            <option value="삼성 M/S">삼성 M/S</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">카테고리</label>
+                        <select id="expense-category" class="input-field" style="width: 100%;" required>
+                            <option value="식비/외식">식비/외식</option>
+                            <option value="마트/장보기">마트/장보기</option>
+                            <option value="의류/용품">의류/용품</option>
+                            <option value="운동/건강">운동/건강</option>
+                            <option value="의료/약국">의료/약국</option>
+                            <option value="여행/레저">여행/레저</option>
+                            <option value="온라인쇼핑">온라인쇼핑</option>
+                            <option value="유류비">유류비</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">금액</label>
+                        <input type="number" id="expense-amount" class="input-field" style="width: 100%;" placeholder="0" required>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; letter-spacing: 0.3px;">메모</label>
+                        <input type="text" id="expense-memo" class="input-field" style="width: 100%;" placeholder="선택사항">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-primary" style="flex: 1;">저장</button>
+                    <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeExpenseForm()">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const defaultFixedCosts = {
+            '10일_기업은행': { name: '기업은행 (세금)', amount: 500000, date: 10 },
+            '10일_하나은행': { name: '하나은행 (이벤트)', amount: 500000, date: 10 },
+            '12일_농협': { name: '농협 (주담대)', amount: 1300000, date: 12 },
+            '12일_농협_카드': { name: '농협 (카드대금)', amount: 300000, date: 12 },
+            '12일_농협_보험': { name: '농협 (보험)', amount: 300000, date: 12 },
+            '12일_농협_적금': { name: '농협 (적금)', amount: 300000, date: 12 },
+            '12일_KT': { name: 'KT 모바일', amount: 40000, date: 12 },
+            '13일_삼성': { name: '삼성카드 (유류비)', amount: 200000, date: 13 },
+            '25일_신한': { name: '신한은행 (카드)', amount: 200000, date: 25 },
+            '25일_신한_적금': { name: '신한은행 (적금)', amount: 300000, date: 25 },
+            '25일_농협_추가': { name: '농협 (주담대 추가)', amount: 500000, date: 25 },
+            '25_연금저축': { name: '연금저축', amount: 1500000, date: '25~30' },
+            '25_ISA': { name: 'ISA 투자', amount: 1500000, date: '25~30' },
+        };
+
+        let monthlyIncome = 14300000;
+        let fixedCosts = JSON.parse(localStorage.getItem('fixedCosts')) || defaultFixedCosts;
+        let minusBalance = parseInt(localStorage.getItem('minusBalance')) || 48000000;
+        let mortgageLoan = parseInt(localStorage.getItem('mortgageLoan')) || 180000000;
+        let minusBalanceDate = localStorage.getItem('minusBalanceDate') || new Date().toISOString().split('T')[0];
+        let mortgageDate = localStorage.getItem('mortgageDate') || new Date().toISOString().split('T')[0];
+        let expenses = [];
+        let editingExpenseIndex = null;
+        let categoryChart = null;
+        let cardChart = null;
+        let isEditingFixedCosts = false;
+
+        function init() {
+            try {
+                monthlyIncome = parseInt(localStorage.getItem('monthlyIncome')) || 14300000;
+                fixedCosts = JSON.parse(localStorage.getItem('fixedCosts')) || defaultFixedCosts;
+                minusBalance = parseInt(localStorage.getItem('minusBalance')) || 48000000;
+                mortgageLoan = parseInt(localStorage.getItem('mortgageLoan')) || 180000000;
+                minusBalanceDate = localStorage.getItem('minusBalanceDate') || new Date().toISOString().split('T')[0];
+                mortgageDate = localStorage.getItem('mortgageDate') || new Date().toISOString().split('T')[0];
+                
+                loadExpenses();
+                setExpenseDate();
+                calculateSalaryPeriod();
+                updateTimeline();
+                updateFixedCostsList();
+                updateDashboard();
+            } catch (e) {
+                console.error('초기화 에러:', e);
+            }
+        }
+
+        function save() {
+            localStorage.setItem('monthlyIncome', monthlyIncome);
+            localStorage.setItem('fixedCosts', JSON.stringify(fixedCosts));
+            localStorage.setItem('minusBalance', minusBalance);
+            localStorage.setItem('minusBalanceDate', minusBalanceDate);
+            localStorage.setItem('mortgageLoan', mortgageLoan);
+            localStorage.setItem('mortgageDate', mortgageDate);
+        }
+
+        function switchTab(tab) {
+            const titles = {
+                'dashboard': '📊 대시보드',
+                'fixed-costs': '🔧 고정비 관리',
+                'timeline': '📅 월별 일정',
+                'expenses': '📋 거래 기록',
+                'analytics': '📈 분석'
+            };
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('page-title').textContent = titles[tab];
+        }
+
+        function editMonthlyIncome() {
+            document.getElementById('income-input').value = monthlyIncome;
+            document.getElementById('income-modal').classList.add('active');
+        }
+
+        function closeIncomeModal() {
+            document.getElementById('income-modal').classList.remove('active');
+        }
+
+        function saveMonthlyIncome() {
+            const value = parseInt(document.getElementById('income-input').value);
+            if (value > 0) {
+                monthlyIncome = value;
+                save();
+                updateDashboard();
+                closeIncomeModal();
+            }
+        }
+
+        function editMinusBalance() {
+            document.getElementById('minus-input').value = minusBalance;
+            document.getElementById('minus-modal').classList.add('active');
+        }
+
+        function closeMinusModal() {
+            document.getElementById('minus-modal').classList.remove('active');
+        }
+
+        function saveMinusBalance() {
+            const value = parseInt(document.getElementById('minus-input').value);
+            if (value >= 0) {
+                minusBalance = value;
+                minusBalanceDate = new Date().toISOString().split('T')[0];
+                save();
+                updateDashboard();
+                closeMinusModal();
+            }
+        }
+
+        function editMortgageLoan() {
+            document.getElementById('mortgage-input').value = mortgageLoan;
+            document.getElementById('mortgage-modal').classList.add('active');
+        }
+
+        function closeMortgageModal() {
+            document.getElementById('mortgage-modal').classList.remove('active');
+        }
+
+        function saveMortgageLoan() {
+            const value = parseInt(document.getElementById('mortgage-input').value);
+            if (value >= 0) {
+                mortgageLoan = value;
+                mortgageDate = new Date().toISOString().split('T')[0];
+                save();
+                updateDashboard();
+                closeMortgageModal();
+            }
+        }
+
+        function openAddFixedCostModal() {
+            document.getElementById('fixed-name-input').value = '';
+            document.getElementById('fixed-amount-input').value = '';
+            document.getElementById('fixed-date-input').value = '25';
+            document.getElementById('add-fixed-cost-modal').classList.add('active');
+        }
+
+        function closeAddFixedCostModal() {
+            document.getElementById('add-fixed-cost-modal').classList.remove('active');
+        }
+
+        function saveNewFixedCost() {
+            const name = document.getElementById('fixed-name-input').value.trim();
+            const amount = parseInt(document.getElementById('fixed-amount-input').value) || 0;
+            const date = document.getElementById('fixed-date-input').value;
+
+            if (!name || amount <= 0) {
+                alert('항목명과 금액을 입력해주세요');
+                return;
+            }
+
+            const newKey = `custom_${Date.now()}`;
+            fixedCosts[newKey] = { name, amount, date: parseInt(date) };
+            save();
+            updateDashboard();
+            closeAddFixedCostModal();
+        }
+
+        function calculateTotalFixedCosts() {
+            return Object.values(fixedCosts).reduce((sum, item) => sum + item.amount, 0);
+        }
+
+        function updateFixedCostsList() {
+            try {
+                let html = '';
+                const grouped = {};
+
+                Object.entries(fixedCosts).forEach(([key, item]) => {
+                    const dateKey = typeof item.date === 'number' ? item.date : item.date;
+                    if (!grouped[dateKey]) grouped[dateKey] = [];
+                    grouped[dateKey].push({ key, ...item });
+                });
+
+                Object.keys(grouped).sort((a, b) => {
+                    const aNum = parseInt(a);
+                    const bNum = parseInt(b);
+                    return !isNaN(aNum) && !isNaN(bNum) ? aNum - bNum : 0;
+                }).forEach(date => {
+                    const items = grouped[date];
+                    const dayTotal = items.reduce((sum, item) => sum + item.amount, 0);
+
+                    html += `<div class="card-item"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;"><span style="font-weight: 600; font-size: 15px;">${date}일</span><span style="font-size: 14px; color: #999;">${formatCurrency(dayTotal)}</span></div><div class="space-y-2">`;
+
+                    items.forEach(item => {
+                        if (isEditingFixedCosts) {
+                            html += `
+                                <div style="display: flex; gap: 12px; align-items: center; background: #f8f8f8; padding: 12px; border-radius: 8px;">
+                                    <div style="flex: 1;">
+                                        <input type="text" value="${item.name}" onchange="updateFixedCost('${item.key}', 'name', this.value)" class="input-field" style="width: 100%; font-size: 13px; margin-bottom: 6px;">
+                                        <input type="number" value="${item.amount}" onchange="updateFixedCost('${item.key}', 'amount', this.value)" class="input-field" style="width: 100%; font-size: 13px; text-align: right;">
+                                    </div>
+                                    <button onclick="deleteFixedCost('${item.key}')" class="btn-danger">삭제</button>
+                                </div>
+                            `;
+                        } else {
+                            html += `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: #f8f8f8; padding: 12px; border-radius: 8px;">
+                                    <div>
+                                        <div style="font-weight: 500; color: #333; font-size: 14px;">${item.name}</div>
+                                        <div style="font-size: 12px; color: #999; margin-top: 4px;">월 ${formatCurrency(item.amount)}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                const container = document.getElementById('fixed-costs-container');
+                const display = document.getElementById('total-fixed-display');
+                if (container) container.innerHTML = html;
+                if (display) display.textContent = formatCurrency(calculateTotalFixedCosts());
+                updateTimeline();
+            } catch (e) {
+                console.error('고정비 리스트 업데이트 에러:', e);
+            }
+        }
+
+        function toggleFixedCostsEdit() {
+            isEditingFixedCosts = !isEditingFixedCosts;
+            updateFixedCostsList();
+        }
+
+        function updateFixedCost(key, field, value) {
+            if (field === 'amount') {
+                fixedCosts[key].amount = parseInt(value) || 0;
+            } else if (field === 'name') {
+                fixedCosts[key].name = value;
+            }
+            updateDashboard();
+        }
+
+        function deleteFixedCost(key) {
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
+                delete fixedCosts[key];
+                save();
+                updateDashboard();
+                updateFixedCostsList();
+            }
+        }
+
+        function saveAllFixedCosts() {
+            save();
+            isEditingFixedCosts = false;
+            updateFixedCostsList();
+            alert('변경사항이 저장되었습니다!');
+        }
+
+        function updateTimeline() {
+            try {
+                let html = '';
+                const today = new Date();
+                const monthDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+                for (let day = 1; day <= monthDays; day++) {
+                    const dayItems = Object.values(fixedCosts).filter(item => 
+                        (typeof item.date === 'number' && item.date === day)
+                    );
+
+                    if (dayItems.length > 0) {
+                        const dayTotal = dayItems.reduce((sum, item) => sum + item.amount, 0);
+                        html += `
+                            <div class="card-item">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 15px;">${day}일</div>
+                                        <div style="font-size: 13px; color: #999; margin-top: 6px;">${dayItems.map(i => i.name).join(', ')}</div>
+                                    </div>
+                                    <div style="font-weight: 600; color: #5b4cff;">${formatCurrency(dayTotal)}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    container.innerHTML = html || '<div style="text-align: center; color: #ccc; padding: 32px;">고정비 일정이 없습니다.</div>';
+                }
+            } catch (e) {
+                console.error('타임라인 업데이트 에러:', e);
+            }
+        }
+
+        function calculateSalaryPeriod() {
+            try {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = today.getMonth();
+                const day = today.getDate();
+
+                let startDate, endDate;
+                if (day >= 25) {
+                    startDate = new Date(year, month, 25);
+                    endDate = new Date(year, month + 1, 24);
+                } else {
+                    startDate = new Date(year, month - 1, 25);
+                    endDate = new Date(year, month, 24);
+                }
+
+                const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+                
+                const periodEl = document.getElementById('salary-period');
+                const daysEl = document.getElementById('days-remaining');
+                
+                if (periodEl) {
+                    periodEl.textContent = 
+                        `${startDate.getMonth() + 1}월 ${startDate.getDate()}일 ~ ${endDate.getMonth() + 1}월 ${endDate.getDate()}일`;
+                }
+                if (daysEl) {
+                    daysEl.textContent = `남은 일수: ${daysRemaining}일`;
+                }
+            } catch (e) {
+                console.error('급여 주기 계산 에러:', e);
+            }
+        }
+
+        function getExpensesInPeriod() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const day = today.getDate();
+
+            let startDate;
+            if (day >= 25) {
+                startDate = new Date(year, month, 25);
+            } else {
+                startDate = new Date(year, month - 1, 25);
+            }
+
+            return expenses.filter(e => new Date(e.date) >= startDate);
+        }
+
+        function updateDashboard() {
+            try {
+                const periodExpenses = getExpensesInPeriod();
+                const totalExpenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
+                const totalFixed = calculateTotalFixedCosts();
+                const availableBudget = monthlyIncome - totalFixed;
+                const remaining = availableBudget - totalExpenses;
+                const progress = (totalExpenses / availableBudget) * 100;
+
+                // null 체크하며 안전하게 업데이트
+                const el = (id) => document.getElementById(id);
+                
+                // 월 소득 - 만 단위까지 표시
+                if (el('monthly-income-display')) {
+                    el('monthly-income-display').textContent = formatCurrencyShort(monthlyIncome);
+                }
+
+                // 마이너스통장 업데이트 (기준: 1억)
+                if (el('minus-balance-display')) el('minus-balance-display').textContent = formatCurrency(minusBalance);
+                const minusPercent = Math.min((minusBalance / 100000000) * 100, 100);
+                if (el('minus-bar')) el('minus-bar').style.width = minusPercent + '%';
+                if (el('minus-percent-display')) el('minus-percent-display').textContent = minusPercent.toFixed(1) + '%';
+                if (el('minus-current')) el('minus-current').textContent = formatCurrency(minusBalance);
+
+                // 주담대 업데이트 (기준: 2억)
+                if (el('mortgage-balance-display')) el('mortgage-balance-display').textContent = formatCurrency(mortgageLoan);
+                const mortgagePercent = Math.min((mortgageLoan / 200000000) * 100, 100);
+                if (el('mortgage-bar')) el('mortgage-bar').style.width = mortgagePercent + '%';
+                if (el('mortgage-percent-display')) el('mortgage-percent-display').textContent = mortgagePercent.toFixed(1) + '%';
+                if (el('mortgage-current')) el('mortgage-current').textContent = formatCurrency(mortgageLoan);
+
+                // 가용 예산
+                const budgetPercent = availableBudget > 0 ? (totalExpenses / availableBudget) * 100 : 0;
+                if (el('budget-bar')) el('budget-bar').style.width = Math.min(budgetPercent, 100) + '%';
+                if (el('budget-percent-display')) el('budget-percent-display').textContent = budgetPercent.toFixed(1) + '%';
+                if (el('budget-current')) el('budget-current').textContent = formatCurrency(totalExpenses);
+                if (el('budget-total')) el('budget-total').textContent = formatCurrency(availableBudget);
+
+                if (el('total-spent')) el('total-spent').textContent = formatCurrency(totalExpenses);
+                if (el('remaining-budget')) el('remaining-budget').textContent = formatCurrency(remaining);
+
+                // 지출 현황 진행바
+                if (el('progress-percent')) el('progress-percent').textContent = progress.toFixed(1) + '%';
+                if (el('progress-bar')) el('progress-bar').style.width = Math.min(progress, 100) + '%';
+
+                // 카드 사용액 계산 및 표시
+                updateCardUsageGraphs(periodExpenses);
+
+                // 마이너스 예상액 계산
+                updateMinusProjection();
+
+                // 주담대 상환 정보
+                updateMortgageInfo();
+
+                updateExpensesList(periodExpenses);
+                updateCharts(periodExpenses);
+                updateFixedCostsList();
+                updateTimeline();
+            } catch (e) {
+                console.error('대시보드 업데이트 에러:', e);
+            }
+        }
+
+        function updateCardUsageGraphs(periodExpenses) {
+            try {
+                // 롯데카드: 50만원 한도
+                const lotteBudget = 500000;
+                const lotteUsed = periodExpenses.filter(e => e.card === '롯데카드').reduce((sum, e) => sum + e.amount, 0);
+                const lottePercent = Math.min((lotteUsed / lotteBudget) * 100, 100);
+                const lotteRemaining = Math.max(lotteBudget - lotteUsed, 0);
+
+                const el = (id) => document.getElementById(id);
+                if (el('lotte-bar')) el('lotte-bar').style.width = lottePercent + '%';
+                if (el('lotte-percent')) el('lotte-percent').textContent = lottePercent.toFixed(1) + '%';
+                if (el('lotte-used')) el('lotte-used').textContent = formatCurrency(lotteUsed);
+                if (el('lotte-remaining')) el('lotte-remaining').textContent = formatCurrency(lotteRemaining);
+
+                // 농협카드: 40만원 한도
+                const nhBudget = 400000;
+                const nhUsed = periodExpenses.filter(e => e.card === '농협카드').reduce((sum, e) => sum + e.amount, 0);
+                const nhPercent = Math.min((nhUsed / nhBudget) * 100, 100);
+                const nhRemaining = Math.max(nhBudget - nhUsed, 0);
+
+                if (el('nh-bar')) el('nh-bar').style.width = nhPercent + '%';
+                if (el('nh-percent')) el('nh-percent').textContent = nhPercent.toFixed(1) + '%';
+                if (el('nh-used')) el('nh-used').textContent = formatCurrency(nhUsed);
+                if (el('nh-remaining')) el('nh-remaining').textContent = formatCurrency(nhRemaining);
+
+                // 신한카드: 20만원 한도
+                const shinhanBudget = 200000;
+                const shinhanUsed = periodExpenses.filter(e => e.card === '신한카드').reduce((sum, e) => sum + e.amount, 0);
+                const shinhanPercent = Math.min((shinhanUsed / shinhanBudget) * 100, 100);
+                const shinhanRemaining = Math.max(shinhanBudget - shinhanUsed, 0);
+
+                if (el('shinhan-bar')) el('shinhan-bar').style.width = shinhanPercent + '%';
+                if (el('shinhan-percent')) el('shinhan-percent').textContent = shinhanPercent.toFixed(1) + '%';
+                if (el('shinhan-used')) el('shinhan-used').textContent = formatCurrency(shinhanUsed);
+                if (el('shinhan-remaining')) el('shinhan-remaining').textContent = formatCurrency(shinhanRemaining);
+            } catch (e) {
+                console.error('카드 사용액 업데이트 에러:', e);
+            }
+        }
+
+        function updateMinusProjection() {
+            try {
+                const el = (id) => document.getElementById(id);
+                const lastMonthCardsInput = parseInt(localStorage.getItem('lastMonthCardsTotal')) || 0;
+                const projectedMinus = minusBalance + lastMonthCardsInput;
+
+                if (el('last-month-cards')) el('last-month-cards').value = lastMonthCardsInput;
+                if (el('projected-minus')) el('projected-minus').textContent = formatCurrency(projectedMinus);
+
+                const difference = projectedMinus - minusBalance;
+                if (el('minus-expansion')) el('minus-expansion').textContent = formatCurrency(difference);
+            } catch (e) {
+                console.error('마이너스 예상액 에러:', e);
+            }
+        }
+
+        function saveLastMonthCards() {
+            const value = parseInt(document.getElementById('last-month-cards').value) || 0;
+            if (value >= 0) {
+                localStorage.setItem('lastMonthCardsTotal', value);
+                updateMinusProjection();
+                alert('저장되었습니다!');
+            }
+        }
+
+        function updateMortgageInfo() {
+            try {
+                const el = (id) => document.getElementById(id);
+                
+                // 주담대 정보
+                const autoTransfer = 1300000; // 농협 자동이체
+                const additionalPayment = 1000000; // 추가 상환 (내 50만 + 아내 50만)
+                const totalMortgagePayment = autoTransfer + additionalPayment;
+                const mortgageMonths = Math.ceil(mortgageLoan / totalMortgagePayment);
+
+                if (el('mortgage-auto-transfer')) el('mortgage-auto-transfer').textContent = formatCurrency(autoTransfer);
+                if (el('mortgage-additional')) el('mortgage-additional').textContent = formatCurrency(additionalPayment);
+                if (el('mortgage-total-payment')) el('mortgage-total-payment').textContent = formatCurrency(totalMortgagePayment);
+                if (el('mortgage-months')) el('mortgage-months').textContent = mortgageMonths;
+            } catch (e) {
+                console.error('주담대 정보 업데이트 에러:', e);
+            }
+        }
+
+        function updateExpensesList(periodExpenses) {
+            try {
+                const sorted = [...periodExpenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const container = document.getElementById('expenses-container');
+                
+                if (!container) return;
+
+                if (sorted.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #ccc; padding: 32px;">거래 기록이 없습니다.</div>';
+                    return;
+                }
+
+                const cardBadges = {
+                    '롯데카드': 'badge-blue',
+                    '농협카드': 'badge-green',
+                    '신한카드': 'badge-blue',
+                    '현대카드': 'badge-blue',
+                    'KB카드': 'badge-blue',
+                    '삼성 M/S': 'badge-blue'
+                };
+
+                let html = '';
+                sorted.forEach((expense, idx) => {
+                    const date = new Date(expense.date);
+                    html += `
+                        <div class="card-item" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 15px;">${expense.memo || expense.category}</div>
+                                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                    <span class="badge ${cardBadges[expense.card] || 'badge-blue'}">${expense.card}</span>
+                                    <span style="font-size: 13px; color: #999;">${date.toLocaleDateString('ko-KR')}</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 600; color: #d32f2f; font-size: 15px; margin-bottom: 8px;">${formatCurrency(expense.amount)}</div>
+                                <div style="display: flex; gap: 6px;">
+                                    <button onclick="editExpense(${idx})" style="padding: 6px 10px; background: #f0f0f0; border: none; border-radius: 4px; font-size: 12px; color: #5b4cff; font-weight: 600; cursor: pointer;">수정</button>
+                                    <button onclick="deleteExpense(${idx})" style="padding: 6px 10px; background: #ffebee; border: none; border-radius: 4px; font-size: 12px; color: #d32f2f; font-weight: 600; cursor: pointer;">삭제</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('지출 리스트 업데이트 에러:', e);
+            }
+        }
+
+        function updateCharts(periodExpenses) {
+            if (typeof Chart === 'undefined') return;
+
+            try {
+                const byCategory = {};
+                periodExpenses.forEach(e => {
+                    byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
+                });
+
+                const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
+                if (categoryCtx && categoryChart) {
+                    categoryChart.destroy();
+                    categoryChart = null;
+                }
+                
+                if (categoryCtx && Object.keys(byCategory).length > 0) {
+                    categoryChart = new Chart(categoryCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(byCategory),
+                            datasets: [{
+                                label: '지출액',
+                                data: Object.values(byCategory),
+                                backgroundColor: '#5b4cff',
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            indexAxis: 'y',
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { ticks: { callback: value => (value / 10000).toFixed(0) + '만' } }
+                            }
+                        }
+                    });
+                }
+
+                const byCard = {};
+                periodExpenses.forEach(e => {
+                    byCard[e.card] = (byCard[e.card] || 0) + e.amount;
+                });
+
+                const cardCtx = document.getElementById('cardChart')?.getContext('2d');
+                if (cardCtx && cardChart) {
+                    cardChart.destroy();
+                    cardChart = null;
+                }
+                
+                if (cardCtx && Object.keys(byCard).length > 0) {
+                    cardChart = new Chart(cardCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(byCard),
+                            datasets: [{
+                                data: Object.values(byCard),
+                                backgroundColor: ['#5b4cff', '#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { legend: { position: 'bottom' } }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('차트 업데이트 에러:', e);
+            }
+        }
+
+        function openExpenseForm() {
+            editingExpenseIndex = null;
+            document.getElementById('expense-title').textContent = '거래 입력';
+            setExpenseDate();
+            document.getElementById('expense-card').value = '롯데카드';
+            document.getElementById('expense-category').value = '식비/외식';
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-memo').value = '';
+            document.getElementById('expense-modal').classList.add('active');
+        }
+
+        function editExpense(index) {
+            const periodExpenses = getExpensesInPeriod();
+            const expense = periodExpenses[index];
+            editingExpenseIndex = expenses.indexOf(expense);
+            
+            document.getElementById('expense-title').textContent = '거래 수정';
+            document.getElementById('expense-date').value = expense.date;
+            document.getElementById('expense-card').value = expense.card;
+            document.getElementById('expense-category').value = expense.category;
+            document.getElementById('expense-amount').value = expense.amount;
+            document.getElementById('expense-memo').value = expense.memo;
+            document.getElementById('expense-modal').classList.add('active');
+        }
+
+        function closeExpenseForm() {
+            document.getElementById('expense-modal').classList.remove('active');
+        }
+
+        function setExpenseDate() {
+            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function saveExpense(event) {
+            event.preventDefault();
+
+            const expense = {
+                date: document.getElementById('expense-date').value,
+                card: document.getElementById('expense-card').value,
+                category: document.getElementById('expense-category').value,
+                amount: parseInt(document.getElementById('expense-amount').value),
+                memo: document.getElementById('expense-memo').value
+            };
+
+            if (editingExpenseIndex !== null) {
+                expenses[editingExpenseIndex] = expense;
+            } else {
+                expenses.push(expense);
+            }
+
+            saveExpenses();
+            updateDashboard();
+            closeExpenseForm();
+        }
+
+        function deleteExpense(index) {
+            if (confirm('이 거래를 삭제하시겠습니까?')) {
+                const periodExpenses = getExpensesInPeriod();
+                const toDelete = periodExpenses[index];
+                expenses = expenses.filter(e => !(e.date === toDelete.date && e.amount === toDelete.amount && e.card === toDelete.card));
+                saveExpenses();
+                updateDashboard();
+            }
+        }
+
+        function saveExpenses() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+
+        function loadExpenses() {
+            const saved = localStorage.getItem('expenses');
+            if (saved) expenses = JSON.parse(saved);
+        }
+
+        function analyzeWithAI() {
+            try {
+                const periodExpenses = getExpensesInPeriod();
+                if (periodExpenses.length === 0) {
+                    alert('분석할 거래 기록이 없습니다. 거래를 먼저 입력해주세요.');
+                    return;
+                }
+
+                const container = document.getElementById('ai-analysis-container');
+                const contentArea = document.getElementById('ai-analysis-content');
+                
+                if (!container || !contentArea) return;
+
+                // 로딩 표시
+                container.classList.remove('hidden');
+                contentArea.innerHTML = '<div style="text-align: center; padding: 20px;"><span style="font-weight: 600;">🤖 Claude AI가 분석 중입니다...</span></div>';
+
+                // 데이터 수집
+                const categoryTotals = {};
+                const cardTotals = {};
+                let totalExpenses = 0;
+
+                periodExpenses.forEach(e => {
+                    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
+                    cardTotals[e.card] = (cardTotals[e.card] || 0) + e.amount;
+                    totalExpenses += e.amount;
+                });
+
+                const sortedCategories = Object.entries(categoryTotals)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+
+                const analysisPrompt = `
+사용자의 월간 지출 데이터를 분석해주세요:
+
+📊 지출 요약:
+- 총 지출액: ${formatCurrency(totalExpenses)}
+- 분석 기간: ${periodExpenses[0]?.date || '이번 달'}
+
+💳 카드별 지출:
+${Object.entries(cardTotals).map(([card, amount]) => `- ${card}: ${formatCurrency(amount)}`).join('\n')}
+
+📂 카테고리별 지출 (상위5):
+${sortedCategories.map(([cat, amount], idx) => `${idx + 1}. ${cat}: ${formatCurrency(amount)} (${((amount/totalExpenses)*100).toFixed(1)}%)`).join('\n')}
+
+다음을 포함한 간단한 분석을 제공해주세요:
+1. 🎯 주요 지출 항목
+2. 💡 절감 포인트
+3. 🎪 다음 달 목표
+
+간결하게 3-4 문장으로 작성해주세요.
+`;
+
+                // Claude API 호출
+                fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-opus-4-6',
+                        max_tokens: 500,
+                        messages: [
+                            { role: 'user', content: analysisPrompt }
+                        ],
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.content && data.content[0]) {
+                        const analysis = data.content[0].text;
+                        contentArea.innerHTML = `<div style="white-space: pre-wrap; line-height: 1.8;">${analysis}</div>`;
+                    } else {
+                        contentArea.innerHTML = '<div style="color: #d32f2f;">분석 중 오류가 발생했습니다.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('AI 분석 에러:', error);
+                    contentArea.innerHTML = `<div style="color: #d32f2f;">❌ 분석 실패: API 호출 오류<br><small>${error.message}</small></div>`;
+                });
+            } catch (e) {
+                console.error('AI 분석 오류:', e);
+                alert('분석 중 오류가 발생했습니다.');
+            }
+        }
+
+        function closeAIAnalysis() {
+            const container = document.getElementById('ai-analysis-container');
+            if (container) container.classList.add('hidden');
+        }
+
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(num);
+        }
+
+        function formatCurrencyShort(num) {
+            if (num >= 10000000) return (num / 10000000).toFixed(1) + '천만';
+            if (num >= 1000000) return (num / 1000000).toFixed(0) + '만';
+            return num;
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
